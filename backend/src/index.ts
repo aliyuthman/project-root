@@ -8,6 +8,7 @@ import transactionsRouter from './routes/transactions';
 import paymentsRouter from './routes/payments';
 import webhooksRouter from './routes/webhooks';
 import healthRouter from './routes/health';
+import dbTestRouter from './routes/dbTest';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/health', healthRouter);
+app.use('/api/db-test', dbTestRouter);
 app.use('/api/data-plans', dataPlansRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/payments', paymentsRouter);
