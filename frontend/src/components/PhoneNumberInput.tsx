@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Network } from "@/app/page";
 import { Box, Heading, Text, Button, ButtonText, Input, InputField, VStack, HStack, Center } from "@/components/ui";
 import { ArrowLeft, AlertTriangle, Smartphone, Check } from "lucide-react";
-import { NigerianPhoneValidator, detectPhoneNetwork } from "@/lib/phone-validation";
+import * as PhoneValidation from "@/lib/phone-validation";
 import { NETWORK_CONFIG } from "@/lib/config";
 
 interface PhoneNumberInputProps {
@@ -28,14 +28,14 @@ export default function PhoneNumberInput({
     phone: string
   ): { isValid: boolean; error?: string; detectedNetwork?: Network } => {
     try {
-      if (!NigerianPhoneValidator) {
+      if (!PhoneValidation.validateNigerianPhone) {
         return {
           isValid: false,
           error: "Phone validation service unavailable"
         };
       }
 
-      const validation = NigerianPhoneValidator.validatePhone(phone, network);
+      const validation = PhoneValidation.validateNigerianPhone(phone, network);
       
       if (!validation.isValid) {
         return {
@@ -44,7 +44,7 @@ export default function PhoneNumberInput({
         };
       }
 
-      const networkDetected = NigerianPhoneValidator.detectNetwork(phone);
+      const networkDetected = PhoneValidation.detectPhoneNetwork ? PhoneValidation.detectPhoneNetwork(phone) : null;
       
       return { 
         isValid: true, 
@@ -61,10 +61,10 @@ export default function PhoneNumberInput({
 
   const formatPhoneNumber = (value: string) => {
     try {
-      if (!NigerianPhoneValidator) {
+      if (!PhoneValidation.formatNigerianPhone) {
         return value; // Fallback to raw value
       }
-      return NigerianPhoneValidator.formatPhoneNumber(value);
+      return PhoneValidation.formatNigerianPhone(value);
     } catch (error) {
       console.error('Phone formatting error:', error);
       return value; // Fallback to raw value
@@ -77,7 +77,7 @@ export default function PhoneNumberInput({
       setPhoneNumber(formatted);
 
       // Auto-detect network for user feedback
-      const detected = detectPhoneNetwork ? detectPhoneNetwork(value) : null;
+      const detected = PhoneValidation.detectPhoneNetwork ? PhoneValidation.detectPhoneNetwork(value) : null;
       setDetectedNetwork(detected);
       
       // Show network mismatch warning if detected network differs from selected
@@ -109,8 +109,8 @@ export default function PhoneNumberInput({
       }
 
       // Use the normalizer to get standard format
-      const standardFormat = NigerianPhoneValidator?.normalizePhoneNumber 
-        ? NigerianPhoneValidator.normalizePhoneNumber(phoneNumber)
+      const standardFormat = PhoneValidation.normalizeNigerianPhone 
+        ? PhoneValidation.normalizeNigerianPhone(phoneNumber)
         : phoneNumber.replace(/\D/g, '').replace(/^234/, '0');
       
       if (!standardFormat) {
