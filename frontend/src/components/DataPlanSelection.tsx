@@ -2,20 +2,36 @@
 
 import { useState, useEffect } from 'react';
 import { Box, Heading, Text, Button, ButtonText, VStack, HStack, Center } from '@/components/ui';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { API_ROUTES, BACKEND_CONFIG } from '@/lib/config';
 import { DataPlan, DataPlanSelectionProps } from '@/types/data-plan';
 
 
+// Helper function to deduplicate plans by data amount, validity, and price
+const deduplicatePlans = (plans: DataPlan[]): DataPlan[] => {
+  const seen = new Set<string>();
+  return plans.filter(plan => {
+    const key = `${plan.data_amount}-${plan.validity}-${plan.price}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
+
 // Helper function to categorize plans by validity
 const categorizePlansByValidity = (plans: DataPlan[]) => {
+  // First deduplicate the plans
+  const uniquePlans = deduplicatePlans(plans);
+  
   const categories: Record<string, { title: string; plans: DataPlan[] }> = {
     daily: { title: "Daily Plans", plans: [] },
     weekly: { title: "Weekly Plans", plans: [] },
     monthly: { title: "Monthly Plans", plans: [] },
   };
 
-  plans.forEach(plan => {
+  uniquePlans.forEach(plan => {
     const validity = plan.validity.toLowerCase();
     if (validity.includes('1 day') || validity.includes('2 days')) {
       categories.daily.plans.push(plan);
@@ -42,6 +58,18 @@ export default function DataPlanSelection({ network, onPlanSelect, onBack }: Dat
   const [plans, setPlans] = useState<DataPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+    daily: true,
+    weekly: true,
+    monthly: true,
+  });
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
 
   useEffect(() => {
     const fetchDataPlans = async () => {
@@ -156,40 +184,52 @@ export default function DataPlanSelection({ network, onPlanSelect, onBack }: Dat
         <VStack space="lg" className="max-w-lg w-full">
           {Object.entries(categorizePlansByValidity(plans)).map(([category, { title, plans: categoryPlans }]) => (
             <VStack key={category} space="md" className="w-full">
-              {/* Category Header */}
-              <VStack space="xs" className="w-full">
-                <Text className="text-lg font-bold text-typography-900 dark:text-typography-50 text-center">
-                  {title}
-                </Text>
-                <div className="w-full h-px bg-outline-200 dark:bg-outline-700"></div>
-              </VStack>
+              {/* Collapsible Category Header */}
+              <Button
+                onPress={() => toggleCategory(category)}
+                variant="outline"
+                className="w-full p-3 rounded-lg border-outline-200 dark:border-outline-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <HStack className="justify-between items-center w-full">
+                  <Text className="text-lg font-bold text-typography-900 dark:text-typography-50">
+                    {title} ({categoryPlans.length})
+                  </Text>
+                  {expandedCategories[category] ? (
+                    <ChevronDown size={20} className="text-typography-600 dark:text-typography-400" />
+                  ) : (
+                    <ChevronRight size={20} className="text-typography-600 dark:text-typography-400" />
+                  )}
+                </HStack>
+              </Button>
               
-              {/* Plans in Category */}
-              <VStack space="sm" className="w-full">
-                {categoryPlans.map((plan) => (
-                  <Button
-                    key={plan.id}
-                    onPress={() => onPlanSelect(plan)}
-                    variant="outline"
-                    className="w-full p-4 h-auto rounded-xl border transition-all bg-white dark:bg-background-900 border-outline-200 dark:border-outline-700 hover:border-primary-300 hover:shadow-md"
-                  >
-                    <HStack className="justify-between items-center w-full">
-                      <VStack space="xs" className="flex-1">
-                        <Text className="text-xl font-bold text-typography-900 dark:text-typography-100">
-                          {plan.data_amount}
+              {/* Collapsible Plans in Category */}
+              {expandedCategories[category] && (
+                <VStack space="sm" className="w-full">
+                  {categoryPlans.map((plan) => (
+                    <Button
+                      key={plan.id}
+                      onPress={() => onPlanSelect(plan)}
+                      variant="outline"
+                      className="w-full p-4 h-auto rounded-xl border transition-all bg-white dark:bg-background-900 border-outline-200 dark:border-outline-700 hover:border-primary-300 hover:shadow-md"
+                    >
+                      <HStack className="justify-between items-center w-full">
+                        <VStack space="xs" className="flex-1">
+                          <Text className="text-xl font-bold text-typography-900 dark:text-typography-100">
+                            {plan.data_amount}
+                          </Text>
+                          <Text className="text-sm text-typography-600 dark:text-typography-400">
+                            Valid for {plan.validity}
+                          </Text>
+                        </VStack>
+                        
+                        <Text className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                          ₦{parseFloat(plan.price).toLocaleString()}
                         </Text>
-                        <Text className="text-sm text-typography-600 dark:text-typography-400">
-                          Valid for {plan.validity}
-                        </Text>
-                      </VStack>
-                      
-                      <Text className="text-xl font-bold text-primary-600 dark:text-primary-400">
-                        ₦{parseFloat(plan.price).toLocaleString()}
-                      </Text>
-                    </HStack>
-                  </Button>
-                ))}
-              </VStack>
+                      </HStack>
+                    </Button>
+                  ))}
+                </VStack>
+              )}
             </VStack>
           ))}
         </VStack>
