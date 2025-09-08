@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Network } from "@/app/page";
-import { Box, Heading, Text, Button, ButtonText, Input, InputField, VStack, HStack, Center, Icon } from "@/components/ui";
-import { ArrowLeft, AlertTriangle, Lock, Smartphone } from "lucide-react";
+import { Box, Heading, Text, Button, ButtonText, Input, InputField, VStack, HStack, Center } from "@/components/ui";
+import { ArrowLeft, AlertTriangle, Smartphone, Check } from "lucide-react";
+import { NigerianPhoneValidator, detectPhoneNetwork } from "@/lib/phone-validation";
+import { NETWORK_CONFIG } from "@/lib/config";
 
 interface PhoneNumberInputProps {
   network: Network;
@@ -19,94 +21,47 @@ export default function PhoneNumberInput({
   const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-
-  // Network prefixes based on CLAUDE.md specifications
-  const networkPrefixes = {
-    mtn: ["0803", "0806", "0813", "0816", "0903", "0906", "0913", "0916"],
-    airtel: [
-      "0701",
-      "0708",
-      "0802",
-      "0808",
-      "0812",
-      "0901",
-      "0902",
-      "0907",
-      "0912",
-    ],
-    glo: ["0705", "0805", "0807", "0811", "0815", "0905", "0915"],
-    "9mobile": ["0809", "0817", "0818", "0909", "0908"],
-  };
+  const [detectedNetwork, setDetectedNetwork] = useState<Network | null>(null);
+  const [showNetworkMismatch, setShowNetworkMismatch] = useState(false);
 
   const validatePhoneNumber = (
     phone: string
-  ): { isValid: boolean; error?: string } => {
-    const cleanPhone = phone.replace(/\D/g, "");
-
-    let normalizedPhone = "";
-
-    if (cleanPhone.startsWith("234")) {
-      normalizedPhone = "0" + cleanPhone.slice(3);
-    } else if (cleanPhone.startsWith("0")) {
-      normalizedPhone = cleanPhone;
-    } else {
+  ): { isValid: boolean; error?: string; detectedNetwork?: Network } => {
+    const validation = NigerianPhoneValidator.validatePhone(phone, network);
+    
+    if (!validation.isValid) {
       return {
         isValid: false,
-        error: "Phone number must start with 0, 234, or +234",
+        error: validation.error
       };
     }
 
-    if (normalizedPhone.length !== 11) {
-      return {
-        isValid: false,
-        error: "Phone number must be 11 digits long (e.g., 08012345678)",
-      };
-    }
-
-    if (!normalizedPhone.startsWith("0")) {
-      return { isValid: false, error: "Phone number must start with 0" };
-    }
-
-    const prefix = normalizedPhone.slice(0, 4);
-    const validPrefixes = networkPrefixes[network];
-
-    if (!validPrefixes.includes(prefix)) {
-      return {
-        isValid: false,
-        error: `This number doesn't belong to ${network.toUpperCase()}. Valid prefixes: ${validPrefixes.join(
-          ", "
-        )}`,
-      };
-    }
-
-    return { isValid: true };
+    const networkDetected = NigerianPhoneValidator.detectNetwork(phone);
+    
+    return { 
+      isValid: true, 
+      detectedNetwork: networkDetected || undefined
+    };
   };
 
   const formatPhoneNumber = (value: string) => {
-    const cleanValue = value.replace(/\D/g, "");
-
-    if (cleanValue.startsWith("234")) {
-      const localNumber = cleanValue.slice(3);
-      if (localNumber.length <= 10) {
-        return (
-          "+234 " +
-          localNumber.replace(/(\d{3})(\d{3})(\d{4})/, "$1 $2 $3").trim()
-        );
-      }
-    }
-
-    if (cleanValue.startsWith("0")) {
-      if (cleanValue.length <= 11) {
-        return cleanValue.replace(/(\d{4})(\d{3})(\d{4})/, "$1 $2 $3").trim();
-      }
-    }
-
-    return cleanValue;
+    return NigerianPhoneValidator.formatPhoneNumber(value);
   };
 
   const handlePhoneChange = (value: string) => {
     const formatted = formatPhoneNumber(value);
     setPhoneNumber(formatted);
+
+    // Auto-detect network for user feedback
+    const detected = detectPhoneNetwork(value);
+    setDetectedNetwork(detected);
+    
+    // Show network mismatch warning if detected network differs from selected
+    if (detected && detected !== network) {
+      setShowNetworkMismatch(true);
+    } else {
+      setShowNetworkMismatch(false);
+    }
 
     if (error) {
       setError(null);
@@ -125,13 +80,12 @@ export default function PhoneNumberInput({
         return;
       }
 
-      const cleanPhone = phoneNumber.replace(/\D/g, "");
-      let standardFormat = "";
-
-      if (cleanPhone.startsWith("234")) {
-        standardFormat = "0" + cleanPhone.slice(3);
-      } else {
-        standardFormat = cleanPhone;
+      // Use the normalizer to get standard format
+      const standardFormat = NigerianPhoneValidator.normalizePhoneNumber(phoneNumber);
+      
+      if (!standardFormat) {
+        setError("Unable to normalize phone number");
+        return;
       }
 
       onPhoneSubmit(standardFormat);
@@ -172,22 +126,27 @@ export default function PhoneNumberInput({
                 isInvalid={!!error}
                 className="rounded-xl"
               >
-                <HStack className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10" space="sm">
-                  <Text className="text-typography-600 font-medium whitespace-nowrap">+234</Text>
-                  <Box className="w-px h-5 bg-outline-300 dark:bg-outline-600 flex-shrink-0" />
-                </HStack>
                 <InputField
-                  placeholder="801 234 5678"
+                  placeholder="0803 123 4567"
                   value={phoneNumber}
                   onChangeText={handlePhoneChange}
                   editable={!isValidating}
                   keyboardType="phone-pad"
                   autoComplete="tel"
-                  className="text-lg pl-20 font-mono"
+                  className="text-lg font-mono"
                 />
               </Input>
             </Box>
 
+            {showNetworkMismatch && detectedNetwork && (
+              <HStack space="sm" className="p-4 rounded-xl bg-warning-50 dark:bg-warning-900/20">
+                <AlertTriangle className="text-warning-500 flex-shrink-0 mt-0.5" size={16} />
+                <Text className="text-warning-700 dark:text-warning-300 text-sm leading-relaxed">
+                  This number belongs to {detectedNetwork.toUpperCase()}, but you selected {network.toUpperCase()}
+                </Text>
+              </HStack>
+            )}
+            
             {error && (
               <HStack space="sm" className="p-4 rounded-xl bg-error-50 dark:bg-error-900/20">
                 <AlertTriangle className="text-error-500 flex-shrink-0 mt-0.5" size={16} />
@@ -219,7 +178,7 @@ export default function PhoneNumberInput({
               </Text>
               <Center>
                 <HStack space="xs" className="flex-wrap">
-                  {networkPrefixes[network].slice(0, 6).map((prefix) => (
+                  {NETWORK_CONFIG.prefixes[network].slice(0, 6).map((prefix) => (
                     <Box
                       key={prefix}
                       className="px-3 py-1.5 bg-background-100 dark:bg-background-800 rounded-lg"
@@ -229,10 +188,10 @@ export default function PhoneNumberInput({
                       </Text>
                     </Box>
                   ))}
-                  {networkPrefixes[network].length > 6 && (
+                  {NETWORK_CONFIG.prefixes[network].length > 6 && (
                     <Box className="px-3 py-1.5 bg-background-100 dark:bg-background-800 rounded-lg">
                       <Text size="xs" className="text-typography-500">
-                        +{networkPrefixes[network].length - 6}
+                        +{NETWORK_CONFIG.prefixes[network].length - 6}
                       </Text>
                     </Box>
                   )}
