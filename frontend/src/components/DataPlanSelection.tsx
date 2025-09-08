@@ -7,6 +7,37 @@ import { API_ROUTES, BACKEND_CONFIG } from '@/lib/config';
 import { DataPlan, DataPlanSelectionProps } from '@/types/data-plan';
 
 
+// Helper function to categorize plans by validity
+const categorizePlansByValidity = (plans: DataPlan[]) => {
+  const categories: Record<string, { title: string; plans: DataPlan[] }> = {
+    daily: { title: "Daily Plans", plans: [] },
+    weekly: { title: "Weekly Plans", plans: [] },
+    monthly: { title: "Monthly Plans", plans: [] },
+  };
+
+  plans.forEach(plan => {
+    const validity = plan.validity.toLowerCase();
+    if (validity.includes('1 day') || validity.includes('2 days')) {
+      categories.daily.plans.push(plan);
+    } else if (validity.includes('7 days') || validity.includes('14 days')) {
+      categories.weekly.plans.push(plan);
+    } else if (validity.includes('30 days') || validity.includes('monthly')) {
+      categories.monthly.plans.push(plan);
+    }
+  });
+
+  // Remove empty categories and sort plans by price
+  Object.keys(categories).forEach(key => {
+    if (categories[key].plans.length === 0) {
+      delete categories[key];
+    } else {
+      categories[key].plans.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+    }
+  });
+
+  return categories;
+};
+
 export default function DataPlanSelection({ network, onPlanSelect, onBack }: DataPlanSelectionProps) {
   const [plans, setPlans] = useState<DataPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,31 +151,46 @@ export default function DataPlanSelection({ network, onPlanSelect, onBack }: Dat
         </VStack>
       </VStack>
 
-      {/* Simple Plans List */}
+      {/* Categorized Plans */}
       <Center>
-        <VStack space="sm" className="max-w-lg w-full">
-          {plans.map((plan) => (
-            <Button
-              key={plan.id}
-              onPress={() => onPlanSelect(plan)}
-              variant="outline"
-              className="w-full p-4 h-auto rounded-xl border transition-all bg-white dark:bg-background-900 border-outline-200 dark:border-outline-700 hover:border-primary-300 hover:shadow-md"
-            >
-              <HStack className="justify-between items-center w-full">
-                <VStack space="xs" className="flex-1">
-                  <Text className="text-xl font-bold text-typography-900 dark:text-typography-100">
-                    {plan.data_amount}
-                  </Text>
-                  <Text className="text-sm text-typography-600 dark:text-typography-400">
-                    Valid for {plan.validity}
-                  </Text>
-                </VStack>
-                
-                <Text className="text-xl font-bold text-primary-600 dark:text-primary-400">
-                  ₦{parseFloat(plan.price).toLocaleString()}
+        <VStack space="lg" className="max-w-lg w-full">
+          {Object.entries(categorizePlansByValidity(plans)).map(([category, { title, plans: categoryPlans }]) => (
+            <VStack key={category} space="md" className="w-full">
+              {/* Category Header */}
+              <VStack space="xs" className="w-full">
+                <Text className="text-lg font-bold text-typography-900 dark:text-typography-50 text-center">
+                  {title}
                 </Text>
-              </HStack>
-            </Button>
+                <div className="w-full h-px bg-outline-200 dark:bg-outline-700"></div>
+              </VStack>
+              
+              {/* Plans in Category */}
+              <VStack space="sm" className="w-full">
+                {categoryPlans.map((plan) => (
+                  <Button
+                    key={plan.id}
+                    onPress={() => onPlanSelect(plan)}
+                    variant="outline"
+                    className="w-full p-4 h-auto rounded-xl border transition-all bg-white dark:bg-background-900 border-outline-200 dark:border-outline-700 hover:border-primary-300 hover:shadow-md"
+                  >
+                    <HStack className="justify-between items-center w-full">
+                      <VStack space="xs" className="flex-1">
+                        <Text className="text-xl font-bold text-typography-900 dark:text-typography-100">
+                          {plan.data_amount}
+                        </Text>
+                        <Text className="text-sm text-typography-600 dark:text-typography-400">
+                          Valid for {plan.validity}
+                        </Text>
+                      </VStack>
+                      
+                      <Text className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                        ₦{parseFloat(plan.price).toLocaleString()}
+                      </Text>
+                    </HStack>
+                  </Button>
+                ))}
+              </VStack>
+            </VStack>
           ))}
         </VStack>
       </Center>
