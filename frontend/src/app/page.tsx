@@ -5,18 +5,11 @@ import NetworkSelection from '@/components/NetworkSelection';
 import DataPlanSelection from '@/components/DataPlanSelection';
 import PhoneNumberInput from '@/components/PhoneNumberInput';
 import OrderSummary from '@/components/OrderSummary';
-import { Box, Heading, Text, HStack, VStack, Center, Icon } from '@/components/ui';
-import { Check, ChevronRight } from 'lucide-react';
+import { Box, Heading, Text, HStack, Center } from '@/components/ui';
+import { ChevronRight } from 'lucide-react';
+import { DataPlan } from '@/types/data-plan';
 
 export type Network = 'mtn' | 'airtel' | 'glo' | '9mobile';
-
-export interface DataPlan {
-  id: string;
-  name: string;
-  dataAmount: string;
-  price: number;
-  validity: string;
-}
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState(1);

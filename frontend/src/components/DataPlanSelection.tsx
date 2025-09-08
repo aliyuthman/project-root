@@ -1,24 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Network } from '@/app/page';
 import { Box, Heading, Text, Button, ButtonText, VStack, HStack, Center } from '@/components/ui';
 import { ArrowLeft } from 'lucide-react';
 import { API_ROUTES } from '@/lib/config';
-
-interface DataPlan {
-  id: string;
-  plan_name: string;
-  data_amount: string;
-  price: string;
-  validity: string;
-}
-
-interface DataPlanSelectionProps {
-  network: Network;
-  onPlanSelect: (plan: DataPlan) => void;
-  onBack: () => void;
-}
+import { DataPlan, DataPlanSelectionProps } from '@/types/data-plan';
 
 
 export default function DataPlanSelection({ network, onPlanSelect, onBack }: DataPlanSelectionProps) {

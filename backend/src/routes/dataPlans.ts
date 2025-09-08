@@ -1,3 +1,4 @@
+
 import { Router } from 'express';
 import { eq, and } from 'drizzle-orm';
 import db from '../db/connection';
@@ -39,7 +40,10 @@ router.get('/:network', async (req, res) => {
   } catch (error) {
     console.error('Error fetching data plans:', error);
     console.error('Error details:', error);
-    res.status(500).json({ error: 'Failed to fetch data plans', details: error.message });
+    res.status(500).json({ 
+      error: 'Failed to fetch data plans', 
+      details: error instanceof Error ? error.message : String(error) 
+    });
   }
 });
 
