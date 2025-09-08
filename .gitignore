@@ -109,3 +109,8 @@ temp/
 *.local
 test-*.js
 *.test.local.js
+
+# Documentation files (except README)
+*.md
+!README.md
+!*/README.md
