@@ -115,12 +115,10 @@ class ErcasPayService {
   }
 
   verifyWebhookSignature(payload: string, signature: string | undefined): boolean {
-    // TODO: Implement webhook signature verification
-    // This would typically involve HMAC verification with webhook secret
     const webhookSecret = process.env.ERCASPAY_WEBHOOK_SECRET;
     if (!webhookSecret) {
       console.warn('Webhook secret not configured, skipping signature verification');
-      return true;
+      return true; // In development, allow requests without signature
     }
     
     if (!signature) {
@@ -128,9 +126,34 @@ class ErcasPayService {
       return false;
     }
     
-    // For now, return true - implement proper HMAC verification in production
-    console.log('Webhook payload length:', payload.length, 'signature:', signature);
-    return true;
+    try {
+      const crypto = require('crypto');
+      
+      // ErcasPay typically uses HMAC-SHA512 for webhook signatures
+      const expectedSignature = crypto
+        .createHmac('sha512', webhookSecret)
+        .update(payload)
+        .digest('hex');
+      
+      // Compare signatures securely to prevent timing attacks
+      const providedSignature = signature.replace('sha512=', '');
+      const isValid = crypto.timingSafeEqual(
+        Buffer.from(expectedSignature, 'hex'),
+        Buffer.from(providedSignature, 'hex')
+      );
+      
+      if (!isValid) {
+        console.warn('Webhook signature verification failed');
+        console.log('Expected:', expectedSignature);
+        console.log('Provided:', providedSignature);
+      }
+      
+      return isValid;
+      
+    } catch (error) {
+      console.error('Error verifying webhook signature:', error);
+      return false;
+    }
   }
 
   parseWebhookPayload(payload: any): WebhookPayload {

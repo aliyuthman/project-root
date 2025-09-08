@@ -10,26 +10,53 @@ const router = Router();
 // POST /api/webhooks/ercaspay
 router.post('/ercaspay', async (req, res) => {
   try {
-    console.log('ErcasPay webhook received:', req.body);
+    console.log('ErcasPay webhook received:', {
+      headers: req.headers,
+      body: req.body,
+      timestamp: new Date().toISOString()
+    });
     
-    // Verify webhook (basic implementation for now)
+    // Rate limiting check (basic implementation)
+    const clientIP = req.ip || req.connection.remoteAddress;
+    console.log('Webhook from IP:', clientIP);
+    
+    // Verify webhook signature
     const signature = req.headers['x-ercaspay-signature'] as string;
-    const isValid = ercasPayService.verifyWebhookSignature(JSON.stringify(req.body), signature);
+    const rawPayload = JSON.stringify(req.body);
+    const isValid = ercasPayService.verifyWebhookSignature(rawPayload, signature);
     
     if (!isValid) {
-      console.warn('Invalid webhook signature');
+      console.warn('Invalid webhook signature from IP:', clientIP);
+      await db.insert(webhooks).values({
+        source: 'ercaspay',
+        event_type: 'signature_verification_failed',
+        reference_id: req.body.transactionReference || 'unknown',
+        payload: { ...req.body, ip: clientIP, signature },
+        status: 'failed'
+      });
       return res.status(400).json({ error: 'Invalid signature' });
     }
 
     // Parse webhook payload
     const webhookData = ercasPayService.parseWebhookPayload(req.body);
     
+    // Check for duplicate webhook (idempotency)
+    const [existingWebhook] = await db.select()
+      .from(webhooks)
+      .where(eq(webhooks.reference_id, webhookData.transactionReference))
+      .limit(1);
+    
+    if (existingWebhook && existingWebhook.status === 'processed') {
+      console.log('Duplicate webhook detected, ignoring:', webhookData.transactionReference);
+      return res.status(200).json({ status: 'duplicate_ignored' });
+    }
+    
     // Store webhook in database
     await db.insert(webhooks).values({
       source: 'ercaspay',
       event_type: req.body.event || 'payment_update',
       reference_id: webhookData.transactionReference,
-      payload: req.body,
+      payload: { ...req.body, ip: clientIP },
       status: 'received'
     });
 
