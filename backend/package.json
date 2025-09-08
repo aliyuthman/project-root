@@ -14,8 +14,7 @@
     "db:seed": "ts-node src/db/seed.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:payment-flow": "ts-node src/test-payment-flow.ts",
-    "test:gladtidings": "ts-node src/test-gladtidings.ts",
-    "postinstall": "npm run build"
+    "test:gladtidings": "ts-node src/test-gladtidings.ts"
   },
   "keywords": [],
   "author": "",
