@@ -5,8 +5,8 @@ services:
     plan: starter
     region: oregon
     rootDir: ./backend
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: yarn
+    startCommand: yarn start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
