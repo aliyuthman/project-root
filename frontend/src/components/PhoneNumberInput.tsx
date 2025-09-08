@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Network } from "@/app/page";
 import { Box, Heading, Text, Button, ButtonText, Input, InputField, VStack, HStack, Center } from "@/components/ui";
 import { ArrowLeft, AlertTriangle, Smartphone, Check } from "lucide-react";
-import * as PhoneValidation from "@/lib/phone-validation";
 import { NETWORK_CONFIG } from "@/lib/config";
 
 interface PhoneNumberInputProps {
@@ -24,31 +23,102 @@ export default function PhoneNumberInput({
   const [detectedNetwork, setDetectedNetwork] = useState<Network | null>(null);
   const [showNetworkMismatch, setShowNetworkMismatch] = useState(false);
 
+  // Built-in phone validation functions to avoid import issues
+  const normalizePhoneNumber = (phone: string): string | null => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    if (cleanPhone.startsWith('234')) {
+      const localNumber = cleanPhone.slice(3);
+      if (localNumber.length === 10) {
+        return '0' + localNumber;
+      }
+    } else if (cleanPhone.startsWith('0')) {
+      if (cleanPhone.length === 11) {
+        return cleanPhone;
+      }
+    } else if (cleanPhone.length === 10) {
+      return '0' + cleanPhone;
+    }
+    
+    return null;
+  };
+
+  const detectNetworkFromPrefix = (phone: string): Network | null => {
+    const normalized = normalizePhoneNumber(phone);
+    if (!normalized || normalized.length < 4) return null;
+    
+    const prefix = normalized.slice(0, 4);
+    
+    for (const [networkName, prefixes] of Object.entries(NETWORK_CONFIG.prefixes)) {
+      if (prefixes.includes(prefix)) {
+        return networkName as Network;
+      }
+    }
+    
+    return null;
+  };
+
+  const formatPhoneForDisplay = (phone: string): string => {
+    const normalized = normalizePhoneNumber(phone);
+    if (!normalized) return phone;
+    
+    // Format as 0803 123 4567
+    return normalized.replace(/(\d{4})(\d{3})(\d{4})/, '$1 $2 $3');
+  };
+
   const validatePhoneNumber = (
     phone: string
   ): { isValid: boolean; error?: string; detectedNetwork?: Network } => {
     try {
-      if (!PhoneValidation.validateNigerianPhone) {
+      if (!phone || !phone.trim()) {
         return {
           isValid: false,
-          error: "Phone validation service unavailable"
+          error: 'Phone number is required'
         };
       }
 
-      const validation = PhoneValidation.validateNigerianPhone(phone, network);
-      
-      if (!validation.isValid) {
+      const normalized = normalizePhoneNumber(phone.trim());
+      if (!normalized) {
         return {
           isValid: false,
-          error: validation.error
+          error: 'Invalid phone number format. Use 0803XXXXXXX format'
         };
       }
 
-      const networkDetected = PhoneValidation.detectPhoneNetwork ? PhoneValidation.detectPhoneNetwork(phone) : null;
-      
-      return { 
-        isValid: true, 
-        detectedNetwork: networkDetected || undefined
+      if (normalized.length !== 11) {
+        return {
+          isValid: false,
+          error: 'Phone number must be 11 digits (e.g., 08012345678)'
+        };
+      }
+
+      if (!normalized.startsWith('0')) {
+        return {
+          isValid: false,
+          error: 'Phone number must start with 0'
+        };
+      }
+
+      const detectedNetwork = detectNetworkFromPrefix(normalized);
+      if (!detectedNetwork) {
+        const validPrefixes = NETWORK_CONFIG.prefixes[network];
+        return {
+          isValid: false,
+          error: `Invalid network prefix. Valid ${network.toUpperCase()} prefixes: ${validPrefixes.slice(0, 5).join(', ')}`
+        };
+      }
+
+      if (detectedNetwork !== network) {
+        const networkPrefixes = NETWORK_CONFIG.prefixes[network];
+        return {
+          isValid: false,
+          error: `This number belongs to ${detectedNetwork.toUpperCase()}, but you selected ${network.toUpperCase()}. Valid ${network.toUpperCase()} prefixes: ${networkPrefixes.join(', ')}`
+        };
+      }
+
+      return {
+        isValid: true,
+        detectedNetwork
       };
     } catch (error) {
       console.error('Phone validation error:', error);
@@ -61,10 +131,7 @@ export default function PhoneNumberInput({
 
   const formatPhoneNumber = (value: string) => {
     try {
-      if (!PhoneValidation.formatNigerianPhone) {
-        return value; // Fallback to raw value
-      }
-      return PhoneValidation.formatNigerianPhone(value);
+      return formatPhoneForDisplay(value);
     } catch (error) {
       console.error('Phone formatting error:', error);
       return value; // Fallback to raw value
@@ -77,7 +144,7 @@ export default function PhoneNumberInput({
       setPhoneNumber(formatted);
 
       // Auto-detect network for user feedback
-      const detected = PhoneValidation.detectPhoneNetwork ? PhoneValidation.detectPhoneNetwork(value) : null;
+      const detected = detectNetworkFromPrefix(value);
       setDetectedNetwork(detected);
       
       // Show network mismatch warning if detected network differs from selected
@@ -109,9 +176,7 @@ export default function PhoneNumberInput({
       }
 
       // Use the normalizer to get standard format
-      const standardFormat = PhoneValidation.normalizeNigerianPhone 
-        ? PhoneValidation.normalizeNigerianPhone(phoneNumber)
-        : phoneNumber.replace(/\D/g, '').replace(/^234/, '0');
+      const standardFormat = normalizePhoneNumber(phoneNumber);
       
       if (!standardFormat) {
         setError("Unable to normalize phone number");
