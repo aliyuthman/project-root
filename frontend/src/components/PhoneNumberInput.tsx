@@ -27,44 +27,72 @@ export default function PhoneNumberInput({
   const validatePhoneNumber = (
     phone: string
   ): { isValid: boolean; error?: string; detectedNetwork?: Network } => {
-    const validation = NigerianPhoneValidator.validatePhone(phone, network);
-    
-    if (!validation.isValid) {
+    try {
+      if (!NigerianPhoneValidator) {
+        return {
+          isValid: false,
+          error: "Phone validation service unavailable"
+        };
+      }
+
+      const validation = NigerianPhoneValidator.validatePhone(phone, network);
+      
+      if (!validation.isValid) {
+        return {
+          isValid: false,
+          error: validation.error
+        };
+      }
+
+      const networkDetected = NigerianPhoneValidator.detectNetwork(phone);
+      
+      return { 
+        isValid: true, 
+        detectedNetwork: networkDetected || undefined
+      };
+    } catch (error) {
+      console.error('Phone validation error:', error);
       return {
         isValid: false,
-        error: validation.error
+        error: "Phone validation failed"
       };
     }
-
-    const networkDetected = NigerianPhoneValidator.detectNetwork(phone);
-    
-    return { 
-      isValid: true, 
-      detectedNetwork: networkDetected || undefined
-    };
   };
 
   const formatPhoneNumber = (value: string) => {
-    return NigerianPhoneValidator.formatPhoneNumber(value);
+    try {
+      if (!NigerianPhoneValidator) {
+        return value; // Fallback to raw value
+      }
+      return NigerianPhoneValidator.formatPhoneNumber(value);
+    } catch (error) {
+      console.error('Phone formatting error:', error);
+      return value; // Fallback to raw value
+    }
   };
 
   const handlePhoneChange = (value: string) => {
-    const formatted = formatPhoneNumber(value);
-    setPhoneNumber(formatted);
+    try {
+      const formatted = formatPhoneNumber(value);
+      setPhoneNumber(formatted);
 
-    // Auto-detect network for user feedback
-    const detected = detectPhoneNetwork(value);
-    setDetectedNetwork(detected);
-    
-    // Show network mismatch warning if detected network differs from selected
-    if (detected && detected !== network) {
-      setShowNetworkMismatch(true);
-    } else {
-      setShowNetworkMismatch(false);
-    }
+      // Auto-detect network for user feedback
+      const detected = detectPhoneNetwork ? detectPhoneNetwork(value) : null;
+      setDetectedNetwork(detected);
+      
+      // Show network mismatch warning if detected network differs from selected
+      if (detected && detected !== network) {
+        setShowNetworkMismatch(true);
+      } else {
+        setShowNetworkMismatch(false);
+      }
 
-    if (error) {
-      setError(null);
+      if (error) {
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Phone number formatting error:', err);
+      setPhoneNumber(value); // Fallback to raw value
     }
   };
 
@@ -81,7 +109,9 @@ export default function PhoneNumberInput({
       }
 
       // Use the normalizer to get standard format
-      const standardFormat = NigerianPhoneValidator.normalizePhoneNumber(phoneNumber);
+      const standardFormat = NigerianPhoneValidator?.normalizePhoneNumber 
+        ? NigerianPhoneValidator.normalizePhoneNumber(phoneNumber)
+        : phoneNumber.replace(/\D/g, '').replace(/^234/, '0');
       
       if (!standardFormat) {
         setError("Unable to normalize phone number");

@@ -13,7 +13,7 @@ export interface PhoneValidationResult {
  * Comprehensive Nigerian phone number validation utility
  * Supports various input formats and detects network automatically
  */
-export class NigerianPhoneValidator {
+class NigerianPhoneValidator {
   
   /**
    * Get all valid prefixes across all networks
@@ -174,7 +174,8 @@ export class NigerianPhoneValidator {
   }
 }
 
-// Export convenience functions
+// Export the class and convenience functions
+export { NigerianPhoneValidator };
 export const validateNigerianPhone = NigerianPhoneValidator.validatePhone;
 export const detectPhoneNetwork = NigerianPhoneValidator.detectNetwork;
 export const formatNigerianPhone = NigerianPhoneValidator.formatPhoneNumber;
