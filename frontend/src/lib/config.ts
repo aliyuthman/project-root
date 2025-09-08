@@ -21,14 +21,9 @@ export const APP_CONFIG = {
   isProduction: process.env.NODE_ENV === "production",
 } as const;
 
-// Database Configuration (Supabase)
-export const DATABASE_CONFIG = {
-  url: getEnvVar("DATABASE_URL"),
-  supabase: {
-    url: getEnvVar("SUPABASE_URL"),
-    anonKey: getEnvVar("SUPABASE_ANON_KEY"),
-    serviceRoleKey: getEnvVar("SUPABASE_SERVICE_ROLE_KEY"),
-  },
+// Backend API Configuration 
+export const BACKEND_CONFIG = {
+  url: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001",
 } as const;
 
 // Payment Gateway Configuration (ErcasPay)
@@ -141,33 +136,14 @@ export const NETWORK_CONFIG = {
 // Validation helper to check if all required environment variables are set
 export const validateEnvironment = () => {
   const requiredVars = [
-    "DATABASE_URL",
-    "SUPABASE_URL",
-    "SUPABASE_ANON_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
+    "NEXT_PUBLIC_BACKEND_URL",
   ];
 
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
   
   if (missingVars.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missingVars.join(", ")}\n` +
-      "Please check your .env.local file and ensure all required variables are set."
-    );
-  }
-
-  // Warn about optional but recommended variables
-  const recommendedVars = [
-    "ERCASPAY_SANDBOX_PUBLIC_KEY",
-    "ERCASPAY_SANDBOX_SECRET_KEY",
-    "GLADTIDINGS_API_KEY",
-  ];
-
-  const missingRecommended = recommendedVars.filter(varName => !process.env[varName]);
-  
-  if (missingRecommended.length > 0 && DEV_CONFIG.debugMode) {
     console.warn(
-      `Warning: Missing recommended environment variables: ${missingRecommended.join(", ")}\n` +
+      `Warning: Missing required environment variables: ${missingVars.join(", ")}\n` +
       "Some features may not work properly without these variables."
     );
   }

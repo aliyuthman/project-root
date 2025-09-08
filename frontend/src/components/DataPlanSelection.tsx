@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Box, Heading, Text, Button, ButtonText, VStack, HStack, Center } from '@/components/ui';
 import { ArrowLeft } from 'lucide-react';
-import { API_ROUTES } from '@/lib/config';
+import { API_ROUTES, BACKEND_CONFIG } from '@/lib/config';
 import { DataPlan, DataPlanSelectionProps } from '@/types/data-plan';
 
 
@@ -18,8 +18,7 @@ export default function DataPlanSelection({ network, onPlanSelect, onBack }: Dat
         setLoading(true);
         setError(null);
         
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-        const response = await fetch(`${backendUrl}${API_ROUTES.dataPlans(network)}`);
+        const response = await fetch(`${BACKEND_CONFIG.url}${API_ROUTES.dataPlans(network)}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch data plans: ${response.statusText}`);
