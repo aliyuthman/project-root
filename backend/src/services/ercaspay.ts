@@ -68,22 +68,37 @@ class ErcasPayService {
 
   async initiatePayment(paymentData: PaymentInitRequest): Promise<PaymentInitResponse> {
     try {
+      // Validate minimum amount for Nigerian transactions
+      if (paymentData.currency === 'NGN' && paymentData.amount < 100) {
+        throw new Error('Amount must be at least 100 NGN for local transactions');
+      }
+
+      const requestPayload = {
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        paymentReference: paymentData.paymentReference,
+        customerName: paymentData.customerName,
+        customerEmail: paymentData.customerEmail,
+        customerPhoneNumber: paymentData.customerPhoneNumber,
+        redirectUrl: paymentData.redirectUrl,
+        description: paymentData.description,
+        paymentMethods: 'card,bank-transfer,ussd,qrcode',
+        feeBearer: 'customer'
+      };
+
+      console.log('ErcasPay API Request:', {
+        url: `${this.baseUrl}/payment/initiate`,
+        payload: requestPayload,
+        headers: this.getHeaders()
+      });
+
       const response = await axios.post(
         `${this.baseUrl}/payment/initiate`,
-        {
-          amount: paymentData.amount,
-          currency: paymentData.currency,
-          paymentReference: paymentData.paymentReference,
-          customerName: paymentData.customerName,
-          customerEmail: paymentData.customerEmail,
-          customerPhoneNumber: paymentData.customerPhoneNumber,
-          redirectUrl: paymentData.redirectUrl,
-          description: paymentData.description,
-          paymentMethods: 'card,bank-transfer,ussd,qrcode',
-          feeBearer: 'customer'
-        },
+        requestPayload,
         { headers: this.getHeaders() }
       );
+
+      console.log('ErcasPay API Response:', response.data);
 
       return {
         requestSuccessful: response.data.requestSuccessful,
@@ -95,7 +110,12 @@ class ErcasPayService {
         }
       };
     } catch (error: any) {
-      console.error('ErcasPay initiate payment error:', error.response?.data || error.message);
+      console.error('ErcasPay initiate payment error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers
+      });
       throw new Error(`Payment initialization failed: ${error.response?.data?.responseMessage || error.message}`);
     }
   }

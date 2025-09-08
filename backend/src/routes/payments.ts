@@ -47,7 +47,7 @@ router.post('/initialize', async (req, res) => {
     
     // Initialize payment with ErcasPay
     console.log('Initializing payment with ErcasPay...');
-    const paymentInit = await ercasPayService.initiatePayment({
+    const paymentData = {
       amount: parseFloat(transaction.amount),
       currency: 'NGN',
       paymentReference,
@@ -56,7 +56,11 @@ router.post('/initialize', async (req, res) => {
       customerPhoneNumber: transaction.phone_number,
       redirectUrl: `${process.env.FRONTEND_URL || 'https://tiritop.vercel.app'}/payment/callback?reference=${paymentReference}`,
       description: `Data purchase for ${transaction.phone_number} - ${transaction.data_plan_name || 'Data Bundle'}`
-    });
+    };
+
+    console.log('Payment initialization data:', paymentData);
+
+    const paymentInit = await ercasPayService.initiatePayment(paymentData);
 
     if (!paymentInit.requestSuccessful) {
       return res.status(400).json({ 
