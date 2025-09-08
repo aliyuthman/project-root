@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: data-purchase-backend
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: ./backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ERCASPAY_ENVIRONMENT
+        value: live
+      - key: ERCASPAY_LIVE_BASE_URL
+        value: https://api.ercaspay.com/api/v1
+      - key: ERCASPAY_LIVE_PUBLIC_KEY
+        sync: false
+      - key: ERCASPAY_LIVE_SECRET_KEY
+        sync: false
+      - key: ERCASPAY_WEBHOOK_SECRET
+        sync: false
+      - key: GLADTIDINGS_BASE_URL
+        value: https://gladtidingsapihub.com/api/v1
+      - key: GLADTIDINGS_API_KEY
+        value: 15b9d00abc71f46bb29f6a407683655b3ced3c5d
+      - key: GLADTIDINGS_API_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: LOG_LEVEL
+        value: info
+      - key: ENABLE_REQUEST_LOGGING
+        value: true
+      - key: DEBUG_MODE
+        value: false
+      - key: DATABASE_LOGGING
+        value: false
