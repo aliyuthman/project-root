@@ -16,11 +16,15 @@ router.get('/:network', async (req, res) => {
   }
 
   try {
+    console.log(`Fetching data plans for network: ${network.toLowerCase()}`);
+    
     const plans = await db.select().from(dataPlans)
       .where(and(
         eq(dataPlans.network, network.toLowerCase()),
         eq(dataPlans.is_available, true)
       ));
+
+    console.log(`Found ${plans.length} plans for ${network.toLowerCase()}`);
 
     res.json({
       network: network.toLowerCase(),
@@ -34,7 +38,8 @@ router.get('/:network', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching data plans:', error);
-    res.status(500).json({ error: 'Failed to fetch data plans' });
+    console.error('Error details:', error);
+    res.status(500).json({ error: 'Failed to fetch data plans', details: error.message });
   }
 });
 
